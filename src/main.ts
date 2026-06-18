@@ -189,14 +189,6 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 			},
 		});
 
-		this.addCommand({
-			id: "copy-last-canvas-auto-size-debug",
-			name: "Copy last Canvas auto-size debug",
-			callback: async () => {
-				await navigator.clipboard.writeText(this.lastDebug);
-				new Notice("Canvas auto-size debug copied.");
-			},
-		});
 	}
 
 	async loadSettings() {

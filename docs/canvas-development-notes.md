@@ -213,10 +213,9 @@ this.liveResizeDebounced = debounce((update) => this.handleEditorUpdate(update, 
 
 ### 使用插件命令查看 debug
 
-项目提供两个命令：
+项目提供一个命令：
 
 - `Show last Canvas auto-size debug`
-- `Copy last Canvas auto-size debug`
 
 调试信息包括：
 
@@ -314,4 +313,3 @@ README 应重点说明：
 - 中文用户如果遇到尾字换行，先调 `CJK extra width` 和 `Editing anti-wrap width`。
 - 如果遇到竖向滚动条，调 `Single-line height` 或 `Vertical padding`。
 - `Tighten width on exit` 默认关闭是有意设计。
-

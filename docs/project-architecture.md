@@ -59,7 +59,7 @@ Obsidian 插件清单。关键字段：
 {
   "id": "canvas-current-node-auto-size",
   "name": "Canvas Current Node Auto Size",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minAppVersion": "1.12.7",
   "description": "Auto-size only the currently edited Canvas text node, with CJK-friendly width padding and configurable height.",
   "isDesktopOnly": false
@@ -816,12 +816,11 @@ private lastDebug = "No Canvas editor update captured yet.";
 
 ### 命令
 
-插件注册两个命令：
+插件注册一个命令：
 
 - `Show last Canvas auto-size debug`
-- `Copy last Canvas auto-size debug`
 
-它们用于在 Obsidian 命令面板中查看或复制最近一次测量结果。
+它用于在 Obsidian 命令面板中查看最近一次测量结果。
 
 ### Debug 内容
 
@@ -1004,4 +1003,3 @@ Obsidian 插件运行时难测，但纯函数可以测试：
 - `containsCjk()`
 - `clampNumberSetting()`
 - 设置加载迁移逻辑
-

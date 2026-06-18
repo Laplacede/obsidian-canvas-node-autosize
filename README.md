@@ -1,45 +1,46 @@
 # Canvas Current Node Auto Size
 
-一个用于 Obsidian Canvas 的文本节点自动调整大小插件。
+Canvas Current Node Auto Size is an Obsidian plugin that automatically resizes only the Canvas text node you are currently editing.
 
-它的目标很明确：只调整当前正在编辑的 Canvas 文本节点，不移动其它节点，不自动重排画布，尽量避免中文长文本在退出编辑时意外换行。
+The plugin is designed for compact Canvas mind maps. It keeps the current node wide enough for the text you type, adds extra width for CJK text, and avoids moving neighboring nodes.
 
-## 功能特点
+## Features
 
-- 只调整当前正在编辑的 Canvas 文本节点。
-- 默认向右扩展，不会把后面的节点顶走。
-- 支持向右、向左、从中心扩展。
-- 编辑时自动扩宽节点，减少临界换行。
-- 针对中文、日文、韩文提供额外宽度余量。
-- 可选退出编辑时收紧宽度，默认关闭。
-- 可调整单行高度和垂直留白，缓解 Canvas 节点出现竖向滚动条。
-- 提供 debug 命令，方便排查 Canvas 节点测量问题。
+- Auto-size only the currently edited Canvas text node.
+- Grow right, grow left, or grow from the center.
+- Keep other Canvas nodes untouched.
+- Add CJK-friendly width padding for Chinese, Japanese, and Korean text.
+- Add temporary anti-wrap width while editing.
+- Optionally tighten width once after leaving edit mode.
+- Configure single-line height and vertical padding.
+- Show debug information from the Obsidian command palette.
 
-## 适用场景
+## Use Cases
 
-这个插件主要为下面这类用法设计：
+This plugin is useful when you:
 
-- 在 Obsidian Canvas 中制作思维导图。
-- 频繁创建短文本节点。
-- 希望节点宽度随输入自动增长。
-- 希望中文节点排版更稳定。
-- 不希望自动布局逻辑移动已有节点。
+- Build mind maps in Obsidian Canvas.
+- Create many short text nodes.
+- Want nodes to grow while typing.
+- Want Chinese text to be less likely to wrap at the last character.
+- Do not want automatic layout logic to push other nodes away.
 
-如果你需要完整的自动排版、自动避让、节点群组重排，这个插件并不打算解决这些问题。
+This plugin does not try to provide full automatic layout, collision avoidance, or graph rearrangement.
 
-## 安装
+## Installation
 
-目前这是开发版插件，可以手动安装。
+### From Obsidian Community Plugins
 
-1. 下载或克隆仓库。
-2. 运行构建：
+After the plugin is accepted into the Obsidian community plugin directory, you will be able to install it from Obsidian:
 
-```bash
-npm install
-npm run build
-```
+1. Open **Settings**.
+2. Go to **Community plugins**.
+3. Search for **Canvas Current Node Auto Size**.
+4. Install and enable the plugin.
 
-3. 将以下文件放入你的 Obsidian vault 插件目录：
+### Manual Installation
+
+For manual installation, download the release assets and place them in your vault:
 
 ```text
 .obsidian/plugins/canvas-current-node-auto-size/
@@ -47,156 +48,141 @@ npm run build
 └── manifest.json
 ```
 
-4. 在 Obsidian 中关闭安全模式，启用 `Canvas Current Node Auto Size`。
+Then reload Obsidian and enable the plugin.
 
-## 开发
+## Development
 
-安装依赖：
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-开发构建：
-
-```bash
-npm run dev
-```
-
-生产构建：
+Build the plugin:
 
 ```bash
 npm run build
 ```
 
-`npm run build` 会先执行 TypeScript 类型检查，然后通过 esbuild 生成 `main.js`。
+The build command runs TypeScript type checking and then bundles `src/main.ts` into `main.js`.
 
-## 设置说明
+## Settings
 
 ### Basics
 
 #### Expansion direction
 
-控制节点宽度变化时从哪里扩展。
+Controls how the node expands when its width changes.
 
-- `Grow right`：向右扩展，默认选项，节点左边不动。
-- `Grow from center`：从中心扩展，节点左右同时变化。
-- `Grow left`：向左扩展，节点右边相对更稳定。
+- **Grow right** keeps the left edge stable.
+- **Grow from center** expands both sides.
+- **Grow left** keeps the right side more stable.
 
-无论选择哪一种模式，插件都只移动当前节点，不会移动其它节点。
+Only the current node is moved or resized.
 
 #### Tighten width on exit
 
-退出编辑时是否收紧宽度。
+When enabled, the plugin shrinks the node width once after you leave edit mode.
 
-默认关闭。建议先保持关闭，因为退出收紧是最容易导致节点突然变窄的功能。
-
-开启后，插件只会在本次编辑确实改变过文本时收紧一次。
+This option is disabled by default because tightening can feel surprising in dense Canvas layouts.
 
 #### Maximum width
 
-节点自动调整后的最大宽度。
+The largest width the plugin can assign to a node.
 
-默认值：`520`
-
-如果你希望节点能拉得更长，可以调大它。
+Default: `520`
 
 ### Width
 
 #### Base width padding
 
-所有文本都会额外保留的基础横向空间。
+Extra width added around measured text in all cases.
 
-默认值：`20`
-
-如果节点总是贴得太紧，可以调大。若希望排版更紧凑，可以调小。
+Default: `20`
 
 #### CJK extra width
 
-包含中文、日文、韩文的行会额外增加的宽度。
+Extra width added only to lines that contain Chinese, Japanese, or Korean text.
 
-默认值：`18`
+Default: `18`
 
-如果中文长句在末尾临界位置仍然容易换行，优先调大这个参数。
+Increase this value if CJK text still wraps too early.
 
 #### Editing anti-wrap width
 
-编辑过程中临时增加的防换行宽度。
+Temporary extra width while editing.
 
-默认值：`28`
+Default: `28`
 
-它主要用于避免输入时刚到边界就折行。这个值只影响编辑过程中的宽度，不等同于最终收紧宽度。
+This helps avoid accidental wrapping at the right edge while typing.
 
 #### Exit tighten padding
 
-退出收紧时保留的宽度余量。
+Extra visible space kept after tightening width on exit.
 
-默认值：`40`
+Default: `40`
 
-只有打开 `Tighten width on exit` 后才会显示和生效。
+This setting is shown only when **Tighten width on exit** is enabled.
 
 ### Height
 
 #### Single-line height
 
-单行节点的最低高度。
+Minimum height reserved for a one-line node.
 
-默认值：`44`
+Default: `44`
 
-如果单行退出编辑后出现文字被压扁或滚动条，可以调大。
+Increase this value if one-line nodes look compressed.
 
 #### Vertical padding
 
-节点文本上下额外总高度。
+Extra total height around node text.
 
-默认值：`10`
+Default: `10`
 
-如果多行节点出现竖向滚动条，可以调大。
+Increase this value if a Canvas node shows a vertical scrollbar after editing.
 
 ### Advanced
 
 #### Resize delay
 
-输入后延迟多久执行 resize，单位是毫秒。
+Delay after typing before resizing, in milliseconds.
 
-默认值：`40`
+Default: `40`
 
-修改这个参数后需要重启 Obsidian 或重新加载插件。
+Restart Obsidian or reload the plugin after changing this setting.
 
 #### Debug notices
 
-打开后，每次插件测量节点时会显示 debug notice。
+Show temporary debug notices whenever the plugin evaluates a Canvas node.
 
-通常不需要开启。排查问题时可以配合下面的命令使用。
+This is mainly useful while troubleshooting.
 
-## 命令
+## Commands
 
-插件提供两个命令，可以在 Obsidian 命令面板中使用：
+The plugin adds this command to the Obsidian command palette:
 
-- `Show last Canvas auto-size debug`
-- `Copy last Canvas auto-size debug`
+- **Show last Canvas auto-size debug**
 
-debug 内容包括当前节点 id、行数、原始宽度、实时宽度、退出收紧宽度、目标宽高等。
+The debug output includes the current node id, line count, original width, live width, tighten width, maximum height, and target size.
 
-## 已知限制
+## Limitations
 
-- 当前主要支持 Canvas 文本节点。
-- 不会自动移动其它节点。
-- 不会做画布自动排版。
-- 不直接修改 `.canvas` JSON 文件，而是通过 Obsidian Canvas 运行时节点对象调整大小。
-- 高度测量采用保守估算，目标是稳定而不是像素级精确。
-- 已保存过的设置不会因为默认值改变而自动改变；如果想使用新默认值，可以点击设置页里的恢复默认。
+- The plugin is focused on Canvas text nodes.
+- It does not move neighboring nodes.
+- It does not perform automatic Canvas layout.
+- It does not directly edit `.canvas` JSON files.
+- Height measurement is intentionally conservative for stability.
+- Existing saved settings are not overwritten when plugin defaults change.
 
-## 文档
+## Documentation
 
-项目中还有两份更详细的中文文档：
+Additional Chinese documentation is available in the repository:
 
 - [Obsidian Canvas 插件开发踩坑与收获记录](docs/canvas-development-notes.md)
 - [项目代码结构与架构详解](docs/project-architecture.md)
 
-如果你想继续开发 Canvas 插件，建议先看踩坑记录；如果你想理解本项目代码结构，建议看架构详解。
-
-## 许可证
+## License
 
 MIT
 
