@@ -559,13 +559,12 @@ class CanvasAutoSizeSettingTab extends PluginSettingTab {
 				})
 			);
 
-		new Setting(containerEl)
-			.setName("Reset settings")
-			.setDesc("Restore sizing defaults. The tighten-width toggle is kept unchanged.")
+			new Setting(containerEl)
+				.setName("Reset settings")
+				.setDesc("Restore sizing defaults. The tighten-width toggle is kept unchanged.")
 			.addButton((button) =>
 				button
 					.setButtonText("Restore defaults")
-					.setDestructive()
 					.onClick(async () => {
 						const keepTightenWidthOnExit = this.plugin.settings.tightenWidthOnExit;
 						this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS, {

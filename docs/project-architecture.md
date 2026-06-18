@@ -59,7 +59,7 @@ Obsidian 插件清单。关键字段：
 {
   "id": "canvas-current-node-auto-size",
   "name": "Canvas Current Node Auto Size",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "minAppVersion": "1.12.0",
   "description": "Auto-size only the currently edited Canvas text node, with CJK-friendly width padding and configurable height.",
   "isDesktopOnly": false
