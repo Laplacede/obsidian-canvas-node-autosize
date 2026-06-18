@@ -1,0 +1,23 @@
+{
+	"name": "canvas-current-node-auto-size",
+	"version": "0.1.0",
+	"description": "Auto-size only the currently edited Obsidian Canvas text node.",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+	},
+	"keywords": [
+		"obsidian",
+		"canvas"
+	],
+	"author": "fengzhe",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/node": "^20.11.30",
+		"builtin-modules": "^3.3.0",
+		"esbuild": "^0.20.2",
+		"obsidian": "^1.6.0",
+		"typescript": "^5.4.3"
+	}
+}

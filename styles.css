@@ -1,0 +1,11 @@
+.canvas-current-node-auto-size-hidden-measurer {
+	position: fixed;
+	inset: auto auto 0 0;
+	z-index: -1;
+	visibility: hidden;
+	pointer-events: none;
+	contain: layout style paint;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+	box-sizing: border-box;
+}
