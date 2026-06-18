@@ -3,7 +3,7 @@
 	"name": "Canvas Current Node Auto Size",
 	"version": "0.1.0",
 	"minAppVersion": "1.12.7",
-	"description": "Auto-size only the currently edited Canvas text node, with CJK-friendly padding and compact height options.",
+	"description": "Auto-size only the currently edited Canvas text node, with CJK-friendly width padding and configurable height.",
 	"author": "fengzhe",
 	"authorUrl": "",
 	"isDesktopOnly": false

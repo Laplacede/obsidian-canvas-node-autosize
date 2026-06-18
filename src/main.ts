@@ -49,6 +49,26 @@ interface WidthMeasurement {
 	tightWidth: number;
 }
 
+type NumericSettingKey = keyof Pick<
+	CanvasAutoSizeSettings,
+	| "maxWidth"
+	| "horizontalPadding"
+	| "cjkSafetyPadding"
+	| "wrapSafetyPadding"
+	| "tightenExtraPadding"
+	| "minSingleLineHeight"
+	| "verticalPadding"
+	| "debounceMs"
+>;
+
+interface NumericSettingDefinition {
+	key: NumericSettingKey;
+	name: string;
+	desc: string;
+	min: number;
+	max?: number;
+}
+
 const INTERNAL_MIN_WIDTH = 96;
 const SCROLLBAR_SAFETY_HEIGHT = 4;
 
@@ -57,7 +77,7 @@ const DEFAULT_SETTINGS: CanvasAutoSizeSettings = {
 	maxWidth: 520,
 	minSingleLineHeight: 44,
 	verticalPadding: 10,
-	horizontalPadding: 40,
+	horizontalPadding: 20,
 	cjkSafetyPadding: 18,
 	wrapSafetyPadding: 28,
 	tightenExtraPadding: 40,
@@ -65,6 +85,65 @@ const DEFAULT_SETTINGS: CanvasAutoSizeSettings = {
 	tightenWidthOnExit: false,
 	debugNotices: false,
 };
+
+const NUMERIC_SETTING_DEFINITIONS: NumericSettingDefinition[] = [
+	{
+		key: "maxWidth",
+		name: "Maximum width",
+		desc: "Largest auto-sized node width. Default: 520 px.",
+		min: INTERNAL_MIN_WIDTH,
+		max: 4000,
+	},
+	{
+		key: "horizontalPadding",
+		name: "Base width padding",
+		desc: "Always add this much width around measured text. Default: 20 px.",
+		min: 0,
+		max: 400,
+	},
+	{
+		key: "cjkSafetyPadding",
+		name: "CJK extra width",
+		desc: "Add this only to lines containing Chinese, Japanese, or Korean text. Default: 18 px.",
+		min: 0,
+		max: 240,
+	},
+	{
+		key: "wrapSafetyPadding",
+		name: "Editing anti-wrap width",
+		desc: "Add this only while editing, so text is less likely to wrap at the edge. Default: 28 px.",
+		min: 0,
+		max: 400,
+	},
+	{
+		key: "tightenExtraPadding",
+		name: "Exit tighten padding",
+		desc: "Add this only when tightening width after leaving edit mode. Default: 40 px.",
+		min: 0,
+		max: 400,
+	},
+	{
+		key: "minSingleLineHeight",
+		name: "Single-line height",
+		desc: "Minimum node height reserved for one visible line. Default: 44 px.",
+		min: 20,
+		max: 160,
+	},
+	{
+		key: "verticalPadding",
+		name: "Vertical padding",
+		desc: "Extra total height around node text. Default: 10 px.",
+		min: 0,
+		max: 200,
+	},
+	{
+		key: "debounceMs",
+		name: "Resize delay",
+		desc: "Delay after typing before resizing. Restart Obsidian after changing this. Default: 40 ms.",
+		min: 0,
+		max: 1000,
+	},
+];
 
 export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 	settings: CanvasAutoSizeSettings;
@@ -139,14 +218,14 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 							: undefined;
 		this.settings = {
 			expansionMode: isExpansionMode(loaded.expansionMode) ? loaded.expansionMode : DEFAULT_SETTINGS.expansionMode,
-			maxWidth: numberOrDefault(loaded.maxWidth, DEFAULT_SETTINGS.maxWidth),
-			minSingleLineHeight: numberOrDefault(loaded.minSingleLineHeight, DEFAULT_SETTINGS.minSingleLineHeight),
-			verticalPadding: numberOrDefault(legacyPadding ?? loaded.verticalPadding, DEFAULT_SETTINGS.verticalPadding),
-			horizontalPadding: numberOrDefault(loaded.horizontalPadding, DEFAULT_SETTINGS.horizontalPadding),
-			cjkSafetyPadding: numberOrDefault(loaded.cjkSafetyPadding, DEFAULT_SETTINGS.cjkSafetyPadding),
-			wrapSafetyPadding: numberOrDefault(loaded.wrapSafetyPadding, DEFAULT_SETTINGS.wrapSafetyPadding),
-			tightenExtraPadding: numberOrDefault(loaded.tightenExtraPadding, DEFAULT_SETTINGS.tightenExtraPadding),
-			debounceMs: numberOrDefault(loaded.debounceMs, DEFAULT_SETTINGS.debounceMs),
+			maxWidth: numberSettingOrDefault("maxWidth", loaded.maxWidth),
+			minSingleLineHeight: numberSettingOrDefault("minSingleLineHeight", loaded.minSingleLineHeight),
+			verticalPadding: numberSettingOrDefault("verticalPadding", legacyPadding ?? loaded.verticalPadding),
+			horizontalPadding: numberSettingOrDefault("horizontalPadding", loaded.horizontalPadding),
+			cjkSafetyPadding: numberSettingOrDefault("cjkSafetyPadding", loaded.cjkSafetyPadding),
+			wrapSafetyPadding: numberSettingOrDefault("wrapSafetyPadding", loaded.wrapSafetyPadding),
+			tightenExtraPadding: numberSettingOrDefault("tightenExtraPadding", loaded.tightenExtraPadding),
+			debounceMs: numberSettingOrDefault("debounceMs", loaded.debounceMs),
 			tightenWidthOnExit: booleanOrDefault(loaded.tightenWidthOnExit, DEFAULT_SETTINGS.tightenWidthOnExit),
 			debugNotices: booleanOrDefault(loaded.debugNotices, DEFAULT_SETTINGS.debugNotices),
 		};
@@ -161,23 +240,8 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 		if (!node) return;
 
 		const session = this.getSession(node, update.view);
-		const measurement = this.measureWidths(update.view);
-		session.view = update.view;
-		session.lineCount = this.measureLineCount(update.view);
-		session.liveWidth = Math.max(session.liveWidth, measurement.liveWidth);
-
-		if (docChanged) {
-			session.changed = true;
-			session.tightWidth = this.acceptTightWidth(session, measurement.tightWidth, update.view.state.doc.length);
-		}
-
-		const nextWidth = Math.max(node.width, session.originalWidth, session.liveWidth);
-		const nextHeight = this.measureHeight(session);
-		session.maxHeight = Math.max(session.maxHeight, nextHeight);
-		this.resizeNode(node, nextWidth, nextHeight);
-		this.scheduleHeightCorrection(session, nextWidth);
-		this.saveCanvasDebounced(node);
-		this.debug("Live resized Canvas node.", session, nextWidth, nextHeight);
+		this.updateSessionMeasurement(session, update.view, docChanged);
+		this.resizeSession(session, "Live resized Canvas node.");
 
 		if (!docChanged) this.scheduleStabilize(session);
 	}
@@ -218,6 +282,28 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 		return session.tightWidth;
 	}
 
+	private updateSessionMeasurement(session: EditSession, view: EditorView, docChanged: boolean) {
+		const measurement = this.measureWidths(view);
+		session.view = view;
+		session.lineCount = this.measureLineCount(view);
+		session.liveWidth = Math.max(session.liveWidth, measurement.liveWidth);
+
+		if (docChanged) {
+			session.changed = true;
+			session.tightWidth = this.acceptTightWidth(session, measurement.tightWidth, view.state.doc.length);
+		}
+	}
+
+	private resizeSession(session: EditSession, message: string) {
+		const nextWidth = Math.max(session.node.width, session.originalWidth, session.liveWidth);
+		const nextHeight = this.measureHeight(session);
+		session.maxHeight = Math.max(session.maxHeight, nextHeight);
+		this.resizeNode(session.node, nextWidth, nextHeight);
+		this.scheduleHeightCorrection(session, nextWidth);
+		this.saveCanvasDebounced(session.node);
+		this.debug(message, session, nextWidth, nextHeight);
+	}
+
 	private scheduleStabilize(session: EditSession) {
 		if (this.stabilizeFrame !== null) window.cancelAnimationFrame(this.stabilizeFrame);
 
@@ -226,16 +312,8 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 				this.stabilizeFrame = null;
 				if (session.finalized || !isResizableCanvasNode(session.node)) return;
 
-				const measurement = this.measureWidths(session.view);
-				session.lineCount = this.measureLineCount(session.view);
-				session.liveWidth = Math.max(session.liveWidth, measurement.liveWidth);
-				const nextWidth = Math.max(session.node.width, session.originalWidth, session.liveWidth);
-				const nextHeight = this.measureHeight(session);
-				session.maxHeight = Math.max(session.maxHeight, nextHeight);
-				this.resizeNode(session.node, nextWidth, nextHeight);
-				this.scheduleHeightCorrection(session, nextWidth);
-				this.saveCanvasDebounced(session.node);
-				this.debug("Stabilized Canvas node after entering edit mode.", session, nextWidth, nextHeight);
+				this.updateSessionMeasurement(session, session.view, false);
+				this.resizeSession(session, "Stabilized Canvas node after entering edit mode.");
 			});
 		});
 	}
@@ -456,9 +534,11 @@ class CanvasAutoSizeSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl("h2", { text: "Canvas Current Node Auto Size" });
 
+		this.addSection("Basics", "These settings cover the main behavior. Other Canvas nodes are never moved.");
+
 		new Setting(containerEl)
 			.setName("Expansion direction")
-			.setDesc("Controls how the current node expands. Other nodes are never moved.")
+			.setDesc("Controls how the current node expands when its width changes.")
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption("right", "Grow right")
@@ -473,27 +553,18 @@ class CanvasAutoSizeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Tighten width on exit")
-			.setDesc("Shrink width once after leaving edit mode.")
+			.setDesc("Shrink width once after leaving edit mode. Leave off if you prefer nodes to keep their widest edited width.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.tightenWidthOnExit).onChange(async (value) => {
 					this.plugin.settings.tightenWidthOnExit = value;
 					await this.plugin.saveSettings();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("Debug notices")
-			.setDesc("Show a temporary debug notice each time the plugin evaluates a Canvas node.")
-			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.debugNotices).onChange(async (value) => {
-					this.plugin.settings.debugNotices = value;
-					await this.plugin.saveSettings();
+					this.display();
 				})
 			);
 
 		new Setting(containerEl)
 			.setName("Reset settings")
-			.setDesc("Restore all plugin settings to their defaults.")
+			.setDesc("Restore sizing defaults. The tighten-width toggle is kept unchanged.")
 			.addButton((button) =>
 				button
 					.setButtonText("Restore defaults")
@@ -508,44 +579,54 @@ class CanvasAutoSizeSettingTab extends PluginSettingTab {
 					})
 			);
 
-		this.addNumberSetting("Maximum width", "Largest auto-sized node width in pixels.", "maxWidth");
-		this.addNumberSetting("Horizontal padding", "Extra width around measured text.", "horizontalPadding");
-		this.addNumberSetting("CJK safety padding", "Extra width for Chinese/Japanese/Korean text.", "cjkSafetyPadding");
-		this.addNumberSetting("Wrap safety padding", "Extra width used while editing to prevent wrapping.", "wrapSafetyPadding");
-		this.addNumberSetting("Tighten extra padding", "Extra visible space kept after tightening width on exit.", "tightenExtraPadding");
-		this.addNumberSetting("Minimum line height", "Minimum height reserved for each visible text line.", "minSingleLineHeight");
-		this.addNumberSetting("Vertical padding", "Extra total height kept around node text.", "verticalPadding");
-		this.addNumberSetting("Debounce", "Delay after typing before resizing, in milliseconds. Restart Obsidian after changing this.", "debounceMs");
+		this.addNumberSetting("maxWidth");
+
+		this.addSection("Width", "Increase these if text wraps too early. Each setting applies at a different time.");
+		this.addNumberSetting("horizontalPadding");
+		this.addNumberSetting("cjkSafetyPadding");
+		this.addNumberSetting("wrapSafetyPadding");
+		if (this.plugin.settings.tightenWidthOnExit) this.addNumberSetting("tightenExtraPadding");
+
+		this.addSection("Height", "Increase these if Canvas shows a vertical scrollbar after editing.");
+		this.addNumberSetting("minSingleLineHeight");
+		this.addNumberSetting("verticalPadding");
+
+		this.addSection("Advanced");
+		this.addNumberSetting("debounceMs");
+
+		new Setting(containerEl)
+			.setName("Debug notices")
+			.setDesc("Show a temporary debug notice each time the plugin evaluates a Canvas node.")
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.debugNotices).onChange(async (value) => {
+					this.plugin.settings.debugNotices = value;
+					await this.plugin.saveSettings();
+				})
+			);
 	}
 
-	private addNumberSetting(
-		name: string,
-		desc: string,
-		key: keyof Pick<
-			CanvasAutoSizeSettings,
-			| "maxWidth"
-			| "horizontalPadding"
-			| "cjkSafetyPadding"
-			| "wrapSafetyPadding"
-			| "tightenExtraPadding"
-			| "minSingleLineHeight"
-			| "verticalPadding"
-			| "debounceMs"
-		>
-	) {
+	private addSection(name: string, desc?: string) {
+		this.containerEl.createEl("h3", { text: name });
+		if (desc) this.containerEl.createEl("p", { text: desc, cls: "setting-item-description" });
+	}
+
+	private addNumberSetting(key: NumericSettingKey) {
+		const definition = getNumberSettingDefinition(key);
+
 		new Setting(this.containerEl)
-			.setName(name)
-			.setDesc(desc)
-			.addText((text) =>
-				text
-					.setValue(String(this.plugin.settings[key]))
-					.onChange(async (value) => {
-						const parsed = Number(value);
-						if (!Number.isFinite(parsed)) return;
-						this.plugin.settings[key] = parsed;
-						await this.plugin.saveSettings();
-					})
-			);
+			.setName(definition.name)
+			.setDesc(definition.desc)
+			.addText((text) => {
+				text.inputEl.type = "number";
+				text.inputEl.min = String(definition.min);
+				if (typeof definition.max === "number") text.inputEl.max = String(definition.max);
+				text.setValue(String(this.plugin.settings[key])).onChange(async (value) => {
+					const parsed = Number(value);
+					if (!Number.isFinite(parsed)) return;
+					this.plugin.settings[key] = clampNumberSetting(key, parsed);
+					await this.plugin.saveSettings();
+				});
+			});
 	}
 }
 
@@ -569,8 +650,20 @@ function clamp(value: number, min: number, max: number) {
 	return Math.min(Math.max(value, min), max);
 }
 
-function numberOrDefault(value: unknown, defaultValue: number) {
-	return typeof value === "number" && Number.isFinite(value) ? value : defaultValue;
+function getNumberSettingDefinition(key: NumericSettingKey) {
+	const definition = NUMERIC_SETTING_DEFINITIONS.find((item) => item.key === key);
+	if (!definition) throw new Error(`Unknown numeric setting: ${key}`);
+	return definition;
+}
+
+function clampNumberSetting(key: NumericSettingKey, value: number) {
+	const definition = getNumberSettingDefinition(key);
+	return clamp(value, definition.min, definition.max ?? Number.MAX_SAFE_INTEGER);
+}
+
+function numberSettingOrDefault(key: NumericSettingKey, value: unknown) {
+	const defaultValue = DEFAULT_SETTINGS[key];
+	return clampNumberSetting(key, typeof value === "number" && Number.isFinite(value) ? value : defaultValue);
 }
 
 function booleanOrDefault(value: unknown, defaultValue: boolean) {
