@@ -1,8 +1,8 @@
 {
 	"id": "canvas-current-node-auto-size",
 	"name": "Canvas Current Node Auto Size",
-	"version": "0.1.1",
-	"minAppVersion": "1.12.7",
+	"version": "0.1.2",
+	"minAppVersion": "1.13.0",
 	"description": "Auto-size only the currently edited Canvas text node, with CJK-friendly width padding and configurable height.",
 	"author": "fengzhe",
 	"authorUrl": "",

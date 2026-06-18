@@ -59,8 +59,8 @@ Obsidian 插件清单。关键字段：
 {
   "id": "canvas-current-node-auto-size",
   "name": "Canvas Current Node Auto Size",
-  "version": "0.1.1",
-  "minAppVersion": "1.12.7",
+  "version": "0.1.2",
+  "minAppVersion": "1.13.0",
   "description": "Auto-size only the currently edited Canvas text node, with CJK-friendly width padding and configurable height.",
   "isDesktopOnly": false
 }
@@ -738,11 +738,11 @@ node.resize({ width, height })
 退出触发注册在 `onload()`：
 
 ```ts
-this.registerDomEvent(document, "focusout", () => this.scheduleFinalize(), true);
-this.registerDomEvent(document, "pointerdown", () => this.scheduleFinalize(), true);
-this.registerDomEvent(document, "keydown", ... Escape ...);
-this.registerDomEvent(document, "keyup", ... Escape ...);
-this.registerDomEvent(window, "blur", () => this.scheduleFinalize(), true);
+this.registerDomEvent(activeDocument, "focusout", () => this.scheduleFinalize(), true);
+this.registerDomEvent(activeDocument, "pointerdown", () => this.scheduleFinalize(), true);
+this.registerDomEvent(activeDocument, "keydown", ... Escape ...);
+this.registerDomEvent(activeDocument, "keyup", ... Escape ...);
+this.registerDomEvent(activeWindow, "blur", () => this.scheduleFinalize(), true);
 ```
 
 ### `scheduleFinalize()`
