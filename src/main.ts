@@ -4,8 +4,6 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
-	SettingDefinitionItem,
-	SettingGroupItem,
 	debounce,
 	editorInfoField,
 } from "obsidian";
@@ -70,8 +68,6 @@ type NumericSettingKey = keyof Pick<
 	| "verticalPadding"
 	| "debounceMs"
 >;
-
-type SettingsKey = keyof CanvasAutoSizeSettings;
 
 interface NumericSettingDefinition {
 	key: NumericSettingKey;
@@ -532,127 +528,96 @@ class CanvasAutoSizeSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	getSettingDefinitions(): SettingDefinitionItem<SettingsKey>[] {
-		return [
-			{
-				type: "group",
-				heading: "Basics",
-				items: [
-					{
-						name: "Expansion direction",
-						desc: "Controls how the current node expands when its width changes.",
-						control: {
-							type: "dropdown",
-							key: "expansionMode",
-							options: {
-								right: "Grow right",
-								center: "Grow from center",
-								left: "Grow left",
-							},
-						},
-					},
-					{
-						name: "Tighten width on exit",
-						desc: "Shrink width once after leaving edit mode. Leave off if you prefer nodes to keep their widest edited width.",
-						control: {
-							type: "toggle",
-							key: "tightenWidthOnExit",
-						},
-					},
-					{
-						name: "Reset settings",
-						desc: "Restore sizing defaults. The tighten-width toggle is kept unchanged.",
-						render: (setting) => {
-							setting.addButton((button) =>
-								button
-									.setButtonText("Restore defaults")
-									.setDestructive()
-									.onClick(async () => {
-										const keepTightenWidthOnExit = this.plugin.settings.tightenWidthOnExit;
-										this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS, {
-											tightenWidthOnExit: keepTightenWidthOnExit,
-										});
-										await this.plugin.saveSettings();
-										this.update();
-									})
-							);
-						},
-					},
-					this.numberSettingDefinition("maxWidth"),
-				],
-			},
-			{
-				type: "group",
-				heading: "Width",
-				items: [
-					this.numberSettingDefinition("horizontalPadding"),
-					this.numberSettingDefinition("cjkSafetyPadding"),
-					this.numberSettingDefinition("wrapSafetyPadding"),
-					Object.assign(this.numberSettingDefinition("tightenExtraPadding"), {
-						visible: () => this.plugin.settings.tightenWidthOnExit,
-					}),
-				],
-			},
-			{
-				type: "group",
-				heading: "Height",
-				items: [
-					this.numberSettingDefinition("minSingleLineHeight"),
-					this.numberSettingDefinition("verticalPadding"),
-				],
-			},
-			{
-				type: "group",
-				heading: "Advanced",
-				items: [
-					this.numberSettingDefinition("debounceMs"),
-					{
-						name: "Debug notices",
-						desc: "Show a temporary debug notice each time the plugin evaluates a Canvas node.",
-						control: {
-							type: "toggle",
-							key: "debugNotices",
-						},
-					},
-				],
-			},
-		];
+	display() {
+		const { containerEl } = this;
+		containerEl.empty();
+		new Setting(containerEl).setName("Basics").setHeading();
+
+		new Setting(containerEl)
+			.setName("Expansion direction")
+			.setDesc("Controls how the current node expands when its width changes.")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("right", "Grow right")
+					.addOption("center", "Grow from center")
+					.addOption("left", "Grow left")
+					.setValue(this.plugin.settings.expansionMode)
+					.onChange(async (value) => {
+						this.plugin.settings.expansionMode = value as ExpansionMode;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Tighten width on exit")
+			.setDesc("Shrink width once after leaving edit mode. Leave off if you prefer nodes to keep their widest edited width.")
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.tightenWidthOnExit).onChange(async (value) => {
+					this.plugin.settings.tightenWidthOnExit = value;
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("Reset settings")
+			.setDesc("Restore sizing defaults. The tighten-width toggle is kept unchanged.")
+			.addButton((button) =>
+				button
+					.setButtonText("Restore defaults")
+					.setDestructive()
+					.onClick(async () => {
+						const keepTightenWidthOnExit = this.plugin.settings.tightenWidthOnExit;
+						this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS, {
+							tightenWidthOnExit: keepTightenWidthOnExit,
+						});
+						await this.plugin.saveSettings();
+						this.display();
+					})
+			);
+
+		this.addNumberSetting("maxWidth");
+
+		new Setting(containerEl).setName("Width").setHeading();
+		this.addNumberSetting("horizontalPadding");
+		this.addNumberSetting("cjkSafetyPadding");
+		this.addNumberSetting("wrapSafetyPadding");
+		if (this.plugin.settings.tightenWidthOnExit) this.addNumberSetting("tightenExtraPadding");
+
+		new Setting(containerEl).setName("Height").setHeading();
+		this.addNumberSetting("minSingleLineHeight");
+		this.addNumberSetting("verticalPadding");
+
+		new Setting(containerEl).setName("Advanced").setHeading();
+		this.addNumberSetting("debounceMs");
+
+		new Setting(containerEl)
+			.setName("Debug notices")
+			.setDesc("Show a temporary debug notice each time the plugin evaluates a Canvas node.")
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.debugNotices).onChange(async (value) => {
+					this.plugin.settings.debugNotices = value;
+					await this.plugin.saveSettings();
+				})
+			);
 	}
 
-	getControlValue(key: string) {
-		return this.plugin.settings[key as SettingsKey];
-	}
-
-	async setControlValue(key: string, value: unknown) {
-		const settingKey = key as SettingsKey;
-		if (isNumericSettingKey(settingKey) && typeof value === "number") {
-			this.plugin.settings[settingKey] = clampNumberSetting(settingKey, value);
-		} else if (settingKey === "expansionMode" && isExpansionMode(value)) {
-			this.plugin.settings.expansionMode = value;
-		} else if (settingKey === "tightenWidthOnExit" && typeof value === "boolean") {
-			this.plugin.settings.tightenWidthOnExit = value;
-			await this.plugin.saveSettings();
-			this.update();
-			return;
-		} else if (settingKey === "debugNotices" && typeof value === "boolean") {
-			this.plugin.settings.debugNotices = value;
-		}
-
-		await this.plugin.saveSettings();
-	}
-
-	private numberSettingDefinition(key: NumericSettingKey): SettingGroupItem<SettingsKey> {
+	private addNumberSetting(key: NumericSettingKey) {
 		const definition = getNumberSettingDefinition(key);
-		return {
-			name: definition.name,
-			desc: definition.desc,
-			control: {
-				type: "number",
-				key,
-				min: definition.min,
-				max: definition.max,
-			},
-		};
+		new Setting(this.containerEl)
+			.setName(definition.name)
+			.setDesc(definition.desc)
+			.addText((text) => {
+				text.inputEl.type = "number";
+				text.inputEl.min = String(definition.min);
+				if (typeof definition.max === "number") text.inputEl.max = String(definition.max);
+				text.setValue(String(this.plugin.settings[key])).onChange(async (value) => {
+					const parsed = Number(value);
+					if (!Number.isFinite(parsed)) return;
+					this.plugin.settings[key] = clampNumberSetting(key, parsed);
+					await this.plugin.saveSettings();
+				});
+			});
 	}
 }
 
@@ -680,10 +645,6 @@ function getNumberSettingDefinition(key: NumericSettingKey) {
 	const definition = NUMERIC_SETTING_DEFINITIONS.find((item) => item.key === key);
 	if (!definition) throw new Error(`Unknown numeric setting: ${key}`);
 	return definition;
-}
-
-function isNumericSettingKey(key: SettingsKey): key is NumericSettingKey {
-	return NUMERIC_SETTING_DEFINITIONS.some((definition) => definition.key === key);
 }
 
 function clampNumberSetting(key: NumericSettingKey, value: number) {

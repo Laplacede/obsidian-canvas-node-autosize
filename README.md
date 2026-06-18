@@ -50,7 +50,7 @@ For manual installation, download the release assets and place them in your vaul
 
 Then reload Obsidian and enable the plugin.
 
-This plugin requires Obsidian `1.13.0` or newer.
+This plugin requires Obsidian `1.12.0` or newer.
 
 ## Development
 
