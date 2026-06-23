@@ -4,6 +4,8 @@ Canvas Current Node Auto Size is an Obsidian plugin that automatically resizes o
 
 It resizes width while you type, then measures rendered Markdown for an accurate final width and height. Text, callouts, tables, lists, code blocks, and CJK content are supported without moving neighboring nodes.
 
+![Canvas node resize demo](assets/canvas-node-autosize-demo.png)
+
 ## Features
 
 - Auto-size only the currently edited Canvas text node.
