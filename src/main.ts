@@ -51,6 +51,8 @@ interface EditSession {
 	hasTrailingWhitespace: boolean;
 	widthSource: "editor" | "rendered-markdown" | "rendered-unavailable";
 	renderedWidth: RenderedWidthMeasurement | null;
+	heightSource: "editor" | "rendered-markdown" | "rendered-unavailable";
+	renderedHeight: RenderedHeightMeasurement | null;
 	finalized: boolean;
 	changed: boolean;
 }
@@ -63,6 +65,13 @@ interface WidthMeasurement {
 interface RenderedWidthMeasurement {
 	width: number;
 	contentWidth: number;
+	outerInsets: number;
+	selector: string;
+}
+
+interface RenderedHeightMeasurement {
+	height: number;
+	contentHeight: number;
 	outerInsets: number;
 	selector: string;
 }
@@ -87,7 +96,7 @@ interface NumericSettingDefinition {
 	max?: number;
 }
 
-const INTERNAL_MIN_WIDTH = 96;
+const INTERNAL_MIN_WIDTH = 60;
 const SCROLLBAR_SAFETY_HEIGHT = 4;
 
 const DEFAULT_SETTINGS: CanvasAutoSizeSettings = {
@@ -98,9 +107,9 @@ const DEFAULT_SETTINGS: CanvasAutoSizeSettings = {
 	horizontalPadding: 20,
 	cjkSafetyPadding: 18,
 	wrapSafetyPadding: 28,
-	tightenExtraPadding: 40,
+	tightenExtraPadding: 20,
 	debounceMs: 40,
-	tightenWidthOnExit: false,
+	tightenWidthOnExit: true,
 	debugNotices: false,
 };
 
@@ -108,21 +117,21 @@ const NUMERIC_SETTING_DEFINITIONS: NumericSettingDefinition[] = [
 	{
 		key: "maxWidth",
 		name: "Maximum width",
-		desc: "Largest auto-sized node width. Default: 520 px.",
+		desc: "Largest width the plugin can assign. Minimum allowed: 60 px. Default: 520 px.",
 		min: INTERNAL_MIN_WIDTH,
 		max: 4000,
 	},
 	{
 		key: "horizontalPadding",
 		name: "Base width padding",
-		desc: "Always add this much width around measured text. Default: 20 px.",
+		desc: "Extra width used with editor text measurement while editing and as a fallback. Default: 20 px.",
 		min: 0,
 		max: 400,
 	},
 	{
 		key: "cjkSafetyPadding",
 		name: "CJK extra width",
-		desc: "Add this only to lines containing Chinese, Japanese, or Korean text. Default: 18 px.",
+		desc: "Extra editor-measurement width for lines containing Chinese, Japanese, or Korean text. Default: 18 px.",
 		min: 0,
 		max: 240,
 	},
@@ -136,21 +145,21 @@ const NUMERIC_SETTING_DEFINITIONS: NumericSettingDefinition[] = [
 	{
 		key: "tightenExtraPadding",
 		name: "Exit tighten padding",
-		desc: "Add this only when tightening width after leaving edit mode. Default: 40 px.",
+		desc: "Extra space added to rendered Markdown width when tightening after editing. Default: 20 px.",
 		min: 0,
 		max: 400,
 	},
 	{
 		key: "minSingleLineHeight",
 		name: "Minimum line height",
-		desc: "Minimum height used for every visible text line. Default: 44 px.",
+		desc: "Minimum per-line height while editing and when rendered Markdown height is unavailable. Default: 44 px.",
 		min: 20,
 		max: 160,
 	},
 	{
 		key: "verticalPadding",
 		name: "Vertical padding",
-		desc: "Extra total height around node text. Default: 10 px.",
+		desc: "Extra total height added to editor and rendered Markdown measurements. Default: 10 px.",
 		min: 0,
 		max: 200,
 	},
@@ -281,6 +290,8 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 			hasTrailingWhitespace: this.hasTrailingWhitespace(view),
 			widthSource: "editor",
 			renderedWidth: null,
+			heightSource: "editor",
+			renderedHeight: null,
 			finalized: false,
 			changed: false,
 		};
@@ -400,7 +411,10 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 						? "rendered-unavailable"
 						: "editor";
 				const correctedWidth = renderedWidth?.width ?? width;
-				const correctedHeight = this.measureHeight(session);
+				const renderedHeight = this.measureRenderedMarkdownHeight(session, correctedWidth);
+				session.renderedHeight = renderedHeight;
+				session.heightSource = renderedHeight ? "rendered-markdown" : "rendered-unavailable";
+				const correctedHeight = renderedHeight?.height ?? this.measureHeight(session);
 				this.resizeNode(session.node, correctedWidth, correctedHeight);
 				this.saveCanvasDebounced(session.node);
 				this.debug("Corrected Canvas node from rendered Markdown.", session, correctedWidth, correctedHeight);
@@ -471,6 +485,67 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 	private findRenderedMarkdown(root: HTMLElement, preferVisible = false) {
 		const elements = Array.from(root.querySelectorAll<HTMLElement>(".markdown-rendered, .markdown-preview-view"));
 		return (preferVisible ? elements.find((element) => element.offsetWidth > 0) : null) ?? elements[0] ?? null;
+	}
+
+	private measureRenderedMarkdownHeight(session: EditSession, width: number) {
+		const nodeEl = this.resolveCurrentNodeElement(session);
+		if (!nodeEl?.parentElement) return null;
+		session.nodeEl = nodeEl;
+
+		const renderedEl = this.findRenderedMarkdown(nodeEl, true);
+		const contentEl = nodeEl.querySelector<HTMLElement>(".canvas-node-content");
+		if (!renderedEl || !contentEl) return null;
+
+		const clone = nodeEl.cloneNode(true) as HTMLElement;
+		clone.setAttribute("aria-hidden", "true");
+		clone.removeAttribute("id");
+		clone.removeAttribute("data-node-id");
+		clone.classList.add("canvas-node-autosize-measure");
+		clone.querySelectorAll<HTMLElement>("[id]").forEach((element) => element.removeAttribute("id"));
+		clone.style.setProperty("position", "absolute", "important");
+		clone.style.setProperty("left", "-100000px", "important");
+		clone.style.setProperty("top", "0", "important");
+		clone.style.setProperty("transform", "none", "important");
+		clone.style.setProperty("visibility", "hidden", "important");
+		clone.style.setProperty("pointer-events", "none", "important");
+		clone.style.setProperty("width", `${clamp(Math.round(width), INTERNAL_MIN_WIDTH, this.settings.maxWidth)}px`, "important");
+		clone.style.setProperty("min-width", "0", "important");
+		clone.style.setProperty("max-width", "none", "important");
+		clone.style.setProperty("height", "auto", "important");
+		clone.style.setProperty("min-height", "0", "important");
+		clone.style.setProperty("max-height", "none", "important");
+		clone.style.setProperty("overflow", "visible", "important");
+
+		const cloneContentEl = clone.querySelector<HTMLElement>(".canvas-node-content");
+		const cloneRenderedEl = this.findRenderedMarkdown(clone);
+		if (!cloneContentEl || !cloneRenderedEl) return null;
+
+		for (const element of [cloneContentEl, cloneRenderedEl]) {
+			element.style.setProperty("height", "auto", "important");
+			element.style.setProperty("min-height", "0", "important");
+			element.style.setProperty("max-height", "none", "important");
+			element.style.setProperty("overflow", "visible", "important");
+		}
+
+		nodeEl.parentElement.appendChild(clone);
+		try {
+			const contentHeight = Math.max(
+				cloneContentEl.offsetHeight,
+				cloneContentEl.scrollHeight,
+				cloneRenderedEl.offsetHeight,
+				cloneRenderedEl.scrollHeight
+			);
+			const outerInsets = Math.max(0, nodeEl.offsetHeight - contentEl.offsetHeight);
+			if (!Number.isFinite(contentHeight) || contentHeight <= 0) return null;
+			return {
+				height: Math.ceil(contentHeight + outerInsets + this.settings.verticalPadding + SCROLLBAR_SAFETY_HEIGHT),
+				contentHeight,
+				outerInsets,
+				selector: renderedEl.classList.contains("markdown-rendered") ? ".markdown-rendered" : ".markdown-preview-view",
+			};
+		} finally {
+			clone.remove();
+		}
 	}
 
 	private resolveCurrentNodeElement(session: EditSession) {
@@ -654,6 +729,10 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 			`rendered selector: ${session.renderedWidth?.selector ?? "none"}`,
 			`rendered content width: ${formatNumber(session.renderedWidth?.contentWidth)}`,
 			`rendered outer insets: ${formatNumber(session.renderedWidth?.outerInsets)}`,
+			`height source: ${session.heightSource}`,
+			`rendered height selector: ${session.renderedHeight?.selector ?? "none"}`,
+			`rendered content height: ${formatNumber(session.renderedHeight?.contentHeight)}`,
+			`rendered vertical insets: ${formatNumber(session.renderedHeight?.outerInsets)}`,
 			`changed: ${session.changed}`,
 			`original width: ${session.originalWidth}`,
 			`live width: ${session.liveWidth}`,
@@ -697,7 +776,7 @@ class CanvasAutoSizeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Tighten width on exit")
-			.setDesc("Shrink width once after leaving edit mode. Leave off if you prefer nodes to keep their widest edited width.")
+			.setDesc("Measure rendered Markdown and tighten the node width after edited content changes. Enabled by default.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.tightenWidthOnExit).onChange(async (value) => {
 					this.plugin.settings.tightenWidthOnExit = value;
@@ -706,17 +785,14 @@ class CanvasAutoSizeSettingTab extends PluginSettingTab {
 				})
 			);
 
-			new Setting(containerEl)
-				.setName("Reset settings")
-				.setDesc("Restore sizing defaults. The tighten-width toggle is kept unchanged.")
+		new Setting(containerEl)
+			.setName("Reset settings")
+			.setDesc("Restore all plugin settings to their defaults.")
 			.addButton((button) =>
 				button
 					.setButtonText("Restore defaults")
 					.onClick(async () => {
-						const keepTightenWidthOnExit = this.plugin.settings.tightenWidthOnExit;
-						this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS, {
-							tightenWidthOnExit: keepTightenWidthOnExit,
-						});
+						this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS);
 						await this.plugin.saveSettings();
 						this.display();
 					})

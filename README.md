@@ -2,7 +2,7 @@
 
 Canvas Current Node Auto Size is an Obsidian plugin that automatically resizes only the Canvas text node you are currently editing.
 
-The plugin is designed for compact Canvas mind maps. It keeps the current node wide enough for the text you type, adds extra width for CJK text, and avoids moving neighboring nodes.
+It resizes width while you type, then measures rendered Markdown for an accurate final width and height. Text, callouts, tables, lists, code blocks, and CJK content are supported without moving neighboring nodes.
 
 ## Features
 
@@ -11,8 +11,9 @@ The plugin is designed for compact Canvas mind maps. It keeps the current node w
 - Keep other Canvas nodes untouched.
 - Add CJK-friendly width padding for Chinese, Japanese, and Korean text.
 - Add temporary anti-wrap width while editing.
-- Optionally tighten width once after leaving edit mode.
-- Configure minimum line height and vertical padding.
+- Tighten width from rendered Markdown after leaving edit mode.
+- Measure rendered Markdown height for callouts, tables, lists, and code blocks.
+- Configure fallback line height and vertical padding.
 - Show debug information from the Obsidian command palette.
 
 ## Use Cases
@@ -87,11 +88,11 @@ Only the current node is moved or resized.
 When enabled, the plugin shrinks the node width once after you leave edit mode.
 The final width is measured from an off-screen clone of the rendered Markdown, including the node's real horizontal DOM insets.
 
-This option is disabled by default because tightening can feel surprising in dense Canvas layouts.
+This option is enabled by default. Disable it if you prefer nodes to keep their widest editing width.
 
 #### Maximum width
 
-The largest width the plugin can assign to a node.
+The largest width the plugin can assign to a node. The internal minimum width is `60` px.
 
 Default: `520`
 
@@ -99,13 +100,13 @@ Default: `520`
 
 #### Base width padding
 
-Extra width added around measured text in all cases.
+Extra width used with editor text measurement while editing and as a fallback. Rendered Markdown tightening uses **Exit tighten padding** instead.
 
 Default: `20`
 
 #### CJK extra width
 
-Extra width added only to lines that contain Chinese, Japanese, or Korean text.
+Extra editor-measurement width added only to lines that contain Chinese, Japanese, or Korean text.
 
 Default: `18`
 
@@ -121,17 +122,19 @@ This helps avoid accidental wrapping at the right edge while typing.
 
 #### Exit tighten padding
 
-Extra visible space kept after tightening width on exit.
+Extra visible space added to rendered Markdown width when tightening on exit.
 
-Default: `40`
+Default: `20`
 
 This setting is shown only when **Tighten width on exit** is enabled.
 
 ### Height
 
+After editing, the plugin measures an off-screen Markdown clone at the final node width. This captures rendered structures such as callouts, tables, lists, and code blocks. The line-height formula remains as a fallback when rendered Markdown is unavailable.
+
 #### Minimum line height
 
-Minimum height used for every visible text line.
+Minimum per-line height while editing and when rendered Markdown height is unavailable.
 
 Default: `44`
 
@@ -139,7 +142,7 @@ Increase this value if one-line nodes look compressed.
 
 #### Vertical padding
 
-Extra total height around node text.
+Extra total height added to editor and rendered Markdown measurements.
 
 Default: `10`
 

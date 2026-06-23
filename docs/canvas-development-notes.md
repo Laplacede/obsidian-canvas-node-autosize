@@ -124,7 +124,7 @@ interface RuntimeCanvasNode {
 
 最终收紧逻辑做了几层保护：
 
-- 默认关闭 `tightenWidthOnExit`。
+- 默认开启 `tightenWidthOnExit`，可由用户关闭以保留编辑期间的最大宽度。
 - 只有 `session.changed === true` 时才允许退出收紧。
 - 编辑中维护 `tightWidth`，但通过 `acceptTightWidth()` 拒绝可疑的突然缩小。
 - 正常编辑时 `liveWidth` 只增不减，避免输入过程中节点塌缩。
@@ -168,6 +168,8 @@ return Math.ceil(lineHeight * lineCount + this.settings.verticalPadding + SCROLL
 ```
 
 这不是最精确的视觉高度，但没有反馈回路，行为更稳定。
+
+退出编辑后会优先使用更准确的 Markdown DOM 高度：先固定最终节点宽度，再离屏克隆渲染内容，解除克隆的高度限制并读取自然高度。因为测量对象是独立克隆，它不会受到当前节点外框高度影响，也不会形成 `scrollHeight` 反馈回路。Callout、表格、列表和代码块都会走这条路径；拿不到渲染 DOM 时才回退到行数公式。
 
 ### 8. 设置参数不要过多，也不要名字太像
 
@@ -285,7 +287,7 @@ this.liveResizeDebounced = debounce((update) => this.handleEditorUpdate(update, 
 
 ### 如果要做自动收紧
 
-建议保留默认关闭。自动收紧是最容易造成“节点塌成一小团”的功能。若要增强，可以考虑：
+自动收紧目前默认开启，并通过渲染后测量与最小宽度限制降低意外塌缩风险。若要增强，可以考虑：
 
 - 只在用户按特定命令时收紧当前节点。
 - 增加收紧预览。
@@ -312,4 +314,4 @@ README 应重点说明：
 - 默认向右扩展。
 - 中文用户如果遇到尾字换行，先调 `CJK extra width` 和 `Editing anti-wrap width`。
 - 如果遇到竖向滚动条，调 `Minimum line height` 或 `Vertical padding`。
-- `Tighten width on exit` 默认关闭是有意设计。
+- `Tighten width on exit` 默认开启；希望保留最大编辑宽度时可以关闭。

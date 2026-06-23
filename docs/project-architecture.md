@@ -269,7 +269,7 @@ const cjkPadding = containsCjk(text) ? this.settings.cjkSafetyPadding : 0;
 
 #### `tightenExtraPadding`
 
-退出收紧时保留的可见宽度。默认 `40`。
+退出收紧时保留的可见宽度。默认 `20`。
 
 只在 `tightenWidthOnExit === true` 且本次编辑确实改过内容时生效。
 
@@ -289,7 +289,7 @@ this.liveResizeDebounced = debounce((update) => this.handleEditorUpdate(update, 
 
 #### `tightenWidthOnExit`
 
-是否在退出编辑时收紧宽度。默认关闭。
+是否在退出编辑时收紧宽度。默认开启。
 
 关闭时：
 
@@ -303,7 +303,7 @@ nextWidth = Math.max(session.node.width, session.liveWidth, session.originalWidt
 nextWidth = session.tightWidth
 ```
 
-它是高风险功能，所以默认关闭。
+当前默认开启，并通过渲染后测量和最小宽度限制降低意外塌缩风险。
 
 #### `debugNotices`
 
@@ -322,9 +322,9 @@ const DEFAULT_SETTINGS: CanvasAutoSizeSettings = {
 	horizontalPadding: 20,
 	cjkSafetyPadding: 18,
 	wrapSafetyPadding: 28,
-	tightenExtraPadding: 40,
+	tightenExtraPadding: 20,
 	debounceMs: 40,
-	tightenWidthOnExit: false,
+	tightenWidthOnExit: true,
 	debugNotices: false,
 };
 ```
@@ -948,7 +948,7 @@ git push
 
 ### 4. 退出收紧必须谨慎
 
-收紧只应该在明确编辑过内容后执行，并且默认关闭。
+收紧只应该在明确编辑过内容后执行；当前默认开启，但用户可以关闭。
 
 ### 5. 参数要少而清楚
 
