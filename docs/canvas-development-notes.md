@@ -128,6 +128,7 @@ interface RuntimeCanvasNode {
 - 只有 `session.changed === true` 时才允许退出收紧。
 - 编辑中维护 `tightWidth`，但通过 `acceptTightWidth()` 拒绝可疑的突然缩小。
 - 正常编辑时 `liveWidth` 只增不减，避免输入过程中节点塌缩。
+- 开启退出收紧时，等待 Markdown DOM 出现后克隆节点，以 `max-content` 离屏测量最终宽度，并加回真实的节点横向占用。
 
 ### 6. 刚进入编辑时容易短暂塌缩
 
@@ -155,16 +156,15 @@ requestAnimationFrame(() => {
 - 用 `contentDOM.scrollHeight`。
 - 统计 `.cm-line` 元素高度。
 - 用行首/行尾坐标上下差。
-- 用 `view.contentHeight` 和 `defaultLineHeight * 行数` 估算。
+- 用可视行数和稳定的每行高度估算。
 
 其中 `scrollHeight` 方案最危险。因为节点外框一旦变高，滚动容器自己的 `scrollHeight` 也可能随之变高；插件下一轮又把这个高度当成内容需求，于是节点会随时间快速变高。
 
-最终回到保守估算：
+最终使用不依赖历史最大高度的确定性估算：
 
 ```ts
-const contentHeight = Math.max(session.view.contentHeight, session.view.defaultLineHeight * lineCount);
-const textHeight = lineCount === 1 ? Math.max(contentHeight, this.settings.minSingleLineHeight) : contentHeight;
-return Math.ceil(textHeight + this.settings.verticalPadding + SCROLLBAR_SAFETY_HEIGHT);
+const lineHeight = Math.max(session.view.defaultLineHeight, this.settings.minSingleLineHeight);
+return Math.ceil(lineHeight * lineCount + this.settings.verticalPadding + SCROLLBAR_SAFETY_HEIGHT);
 ```
 
 这不是最精确的视觉高度，但没有反馈回路，行为更稳定。
@@ -311,5 +311,5 @@ README 应重点说明：
 - 插件只调整当前节点，不移动其它节点。
 - 默认向右扩展。
 - 中文用户如果遇到尾字换行，先调 `CJK extra width` 和 `Editing anti-wrap width`。
-- 如果遇到竖向滚动条，调 `Single-line height` 或 `Vertical padding`。
+- 如果遇到竖向滚动条，调 `Minimum line height` 或 `Vertical padding`。
 - `Tighten width on exit` 默认关闭是有意设计。

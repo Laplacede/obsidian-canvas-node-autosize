@@ -208,15 +208,15 @@ measureWidths() / resizeNode()
 
 #### `minSingleLineHeight`
 
-单行文本节点的最小高度。默认 `44`。
+每个可视文本行使用的最小行高。默认 `44`。
 
-只在 `lineCount === 1` 时作为兜底：
+它与 CodeMirror 的默认行高取较大值：
 
 ```ts
-const textHeight = lineCount === 1 ? Math.max(contentHeight, this.settings.minSingleLineHeight) : contentHeight;
+const lineHeight = Math.max(session.view.defaultLineHeight, this.settings.minSingleLineHeight);
 ```
 
-它的目标是避免单行节点退出编辑后被压得太矮，出现文字被裁切或滚动条。
+它对单行和多行节点都生效，避免展示模式的行高大于编辑模式时文字被压缩。
 
 #### `verticalPadding`
 
@@ -458,7 +458,6 @@ interface EditSession {
 	originalWidth: number;
 	liveWidth: number;
 	tightWidth: number;
-	maxHeight: number;
 	docLength: number;
 	lineCount: number;
 	finalized: boolean;
@@ -493,14 +492,6 @@ session.liveWidth = Math.max(session.liveWidth, measurement.liveWidth);
 ### `tightWidth`
 
 退出收紧时使用的宽度。它更接近文本实际需要的宽度，不包含编辑中额外防换行的 `wrapSafetyPadding`。
-
-### `maxHeight`
-
-本次编辑中见过的最大高度。退出时如果是多行，会避免高度突然低于编辑中使用过的高度：
-
-```ts
-const nextHeight = session.lineCount > 1 ? Math.max(measuredHeight, session.maxHeight) : measuredHeight;
-```
 
 ### `docLength`
 
@@ -551,7 +542,6 @@ this.activeSession = {
 	originalWidth: node.width,
 	liveWidth: Math.max(node.width, INTERNAL_MIN_WIDTH),
 	tightWidth: INTERNAL_MIN_WIDTH,
-	maxHeight: node.height,
 	docLength: -1,
 	lineCount: this.measureLineCount(view),
 	finalized: false,
@@ -582,7 +572,6 @@ liveWidth 只增不减
 ```text
 nextWidth = max(node.width, originalWidth, liveWidth)
 nextHeight = measureHeight(session)
-session.maxHeight = max(session.maxHeight, nextHeight)
 resizeNode(node, nextWidth, nextHeight)
 scheduleHeightCorrection(session, nextWidth)
 saveCanvasDebounced(node)
@@ -697,15 +686,14 @@ const wrappedLines = start && end ? Math.round(Math.max(0, end.top - start.top) 
 
 ```ts
 const lineCount = Math.max(1, session.lineCount);
-const contentHeight = Math.max(session.view.contentHeight, session.view.defaultLineHeight * lineCount);
-const textHeight = lineCount === 1 ? Math.max(contentHeight, this.settings.minSingleLineHeight) : contentHeight;
-return Math.ceil(textHeight + this.settings.verticalPadding + SCROLLBAR_SAFETY_HEIGHT);
+const lineHeight = Math.max(session.view.defaultLineHeight, this.settings.minSingleLineHeight);
+return Math.ceil(lineHeight * lineCount + this.settings.verticalPadding + SCROLLBAR_SAFETY_HEIGHT);
 ```
 
 含义：
 
-- 多行主要依赖 `contentHeight` 和行数估算。
-- 单行额外用 `minSingleLineHeight` 防止被压太扁。
+- 每一行都使用 CodeMirror 默认行高和设置下限中的较大值。
+- 高度只由当前有效可视行数决定，不依赖历史最大高度。
 - 最后加 `verticalPadding` 和内部固定 `SCROLLBAR_SAFETY_HEIGHT`。
 
 当前 `SCROLLBAR_SAFETY_HEIGHT = 4`。
@@ -767,8 +755,7 @@ this.finalizeTimer = window.setTimeout(() => {
 标记 finalized
 判断是否 shouldTighten
 计算 nextWidth
-计算 measuredHeight
-多行时避免低于 maxHeight
+根据当前有效可视行数计算高度
 resizeNode()
 requestSave()
 debug()
@@ -865,7 +852,7 @@ class CanvasAutoSizeSettingTab extends PluginSettingTab
 
 ### Height
 
-- Single-line height
+- Minimum line height
 - Vertical padding
 
 ### Advanced

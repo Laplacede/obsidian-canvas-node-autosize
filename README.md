@@ -12,7 +12,7 @@ The plugin is designed for compact Canvas mind maps. It keeps the current node w
 - Add CJK-friendly width padding for Chinese, Japanese, and Korean text.
 - Add temporary anti-wrap width while editing.
 - Optionally tighten width once after leaving edit mode.
-- Configure single-line height and vertical padding.
+- Configure minimum line height and vertical padding.
 - Show debug information from the Obsidian command palette.
 
 ## Use Cases
@@ -85,6 +85,7 @@ Only the current node is moved or resized.
 #### Tighten width on exit
 
 When enabled, the plugin shrinks the node width once after you leave edit mode.
+The final width is measured from an off-screen clone of the rendered Markdown, including the node's real horizontal DOM insets.
 
 This option is disabled by default because tightening can feel surprising in dense Canvas layouts.
 
@@ -128,9 +129,9 @@ This setting is shown only when **Tighten width on exit** is enabled.
 
 ### Height
 
-#### Single-line height
+#### Minimum line height
 
-Minimum height reserved for a one-line node.
+Minimum height used for every visible text line.
 
 Default: `44`
 
