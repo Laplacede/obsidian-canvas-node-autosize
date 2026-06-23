@@ -434,37 +434,11 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 		clone.setAttribute("aria-hidden", "true");
 		clone.removeAttribute("id");
 		clone.removeAttribute("data-node-id");
-		clone.classList.add("canvas-node-autosize-measure");
+		clone.classList.add("canvas-node-autosize-measure", "is-width-measure");
 		clone.querySelectorAll<HTMLElement>("[id]").forEach((element) => element.removeAttribute("id"));
-		clone.style.setProperty("position", "absolute", "important");
-		clone.style.setProperty("left", "-100000px", "important");
-		clone.style.setProperty("top", "0", "important");
-		clone.style.setProperty("transform", "none", "important");
-		clone.style.setProperty("visibility", "hidden", "important");
-		clone.style.setProperty("pointer-events", "none", "important");
-		clone.style.setProperty("width", "max-content", "important");
-		clone.style.setProperty("min-width", "0", "important");
-		clone.style.setProperty("max-width", "none", "important");
-		clone.style.setProperty("height", "auto", "important");
-		clone.style.setProperty("max-height", "none", "important");
 
 		const cloneRenderedEl = this.findRenderedMarkdown(clone);
 		if (!cloneRenderedEl) return null;
-
-		for (const element of [clone.querySelector<HTMLElement>(".canvas-node-content"), cloneRenderedEl]) {
-			if (!element) continue;
-			element.style.setProperty("width", "max-content", "important");
-			element.style.setProperty("min-width", "0", "important");
-			element.style.setProperty("max-width", "none", "important");
-			element.style.setProperty("height", "auto", "important");
-			element.style.setProperty("max-height", "none", "important");
-			element.style.setProperty("overflow", "visible", "important");
-		}
-		cloneRenderedEl.style.setProperty("white-space", "nowrap", "important");
-		cloneRenderedEl.querySelectorAll<HTMLElement>("*").forEach((element) => {
-			element.style.setProperty("white-space", "nowrap", "important");
-			element.style.setProperty("max-width", "none", "important");
-		});
 
 		nodeEl.parentElement.appendChild(clone);
 		try {
@@ -500,32 +474,15 @@ export default class CanvasCurrentNodeAutoSizePlugin extends Plugin {
 		clone.setAttribute("aria-hidden", "true");
 		clone.removeAttribute("id");
 		clone.removeAttribute("data-node-id");
-		clone.classList.add("canvas-node-autosize-measure");
+		clone.classList.add("canvas-node-autosize-measure", "is-height-measure");
 		clone.querySelectorAll<HTMLElement>("[id]").forEach((element) => element.removeAttribute("id"));
-		clone.style.setProperty("position", "absolute", "important");
-		clone.style.setProperty("left", "-100000px", "important");
-		clone.style.setProperty("top", "0", "important");
-		clone.style.setProperty("transform", "none", "important");
-		clone.style.setProperty("visibility", "hidden", "important");
-		clone.style.setProperty("pointer-events", "none", "important");
-		clone.style.setProperty("width", `${clamp(Math.round(width), INTERNAL_MIN_WIDTH, this.settings.maxWidth)}px`, "important");
-		clone.style.setProperty("min-width", "0", "important");
-		clone.style.setProperty("max-width", "none", "important");
-		clone.style.setProperty("height", "auto", "important");
-		clone.style.setProperty("min-height", "0", "important");
-		clone.style.setProperty("max-height", "none", "important");
-		clone.style.setProperty("overflow", "visible", "important");
+		clone.setCssProps({
+			"--canvas-node-autosize-measure-width": `${clamp(Math.round(width), INTERNAL_MIN_WIDTH, this.settings.maxWidth)}px`,
+		});
 
 		const cloneContentEl = clone.querySelector<HTMLElement>(".canvas-node-content");
 		const cloneRenderedEl = this.findRenderedMarkdown(clone);
 		if (!cloneContentEl || !cloneRenderedEl) return null;
-
-		for (const element of [cloneContentEl, cloneRenderedEl]) {
-			element.style.setProperty("height", "auto", "important");
-			element.style.setProperty("min-height", "0", "important");
-			element.style.setProperty("max-height", "none", "important");
-			element.style.setProperty("overflow", "visible", "important");
-		}
 
 		nodeEl.parentElement.appendChild(clone);
 		try {

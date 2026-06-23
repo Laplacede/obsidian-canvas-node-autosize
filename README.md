@@ -46,7 +46,8 @@ For manual installation, download the release assets and place them in your vaul
 ```text
 .obsidian/plugins/canvas-current-node-auto-size/
 ├── main.js
-└── manifest.json
+├── manifest.json
+└── styles.css
 ```
 
 Then reload Obsidian and enable the plugin.

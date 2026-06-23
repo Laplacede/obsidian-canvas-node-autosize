@@ -1,6 +1,6 @@
 {
 	"name": "canvas-current-node-auto-size",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Automatically resize the current Obsidian Canvas text node to fit its rendered content.",
 	"main": "main.js",
 	"scripts": {

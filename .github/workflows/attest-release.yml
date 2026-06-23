@@ -27,3 +27,8 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: manifest.json
+
+      - name: Attest styles.css
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: styles.css

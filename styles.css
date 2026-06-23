@@ -1,0 +1,52 @@
+.canvas-node-autosize-measure {
+	position: absolute !important;
+	left: -100000px !important;
+	top: 0 !important;
+	transform: none !important;
+	visibility: hidden !important;
+	pointer-events: none !important;
+	height: auto !important;
+	min-height: 0 !important;
+	max-height: none !important;
+	overflow: visible !important;
+}
+
+.canvas-node-autosize-measure.is-width-measure {
+	width: max-content !important;
+	min-width: 0 !important;
+	max-width: none !important;
+}
+
+.canvas-node-autosize-measure.is-width-measure .canvas-node-content,
+.canvas-node-autosize-measure.is-width-measure .markdown-rendered,
+.canvas-node-autosize-measure.is-width-measure .markdown-preview-view {
+	width: max-content !important;
+	min-width: 0 !important;
+	max-width: none !important;
+	height: auto !important;
+	max-height: none !important;
+	overflow: visible !important;
+}
+
+.canvas-node-autosize-measure.is-width-measure .markdown-rendered,
+.canvas-node-autosize-measure.is-width-measure .markdown-rendered *,
+.canvas-node-autosize-measure.is-width-measure .markdown-preview-view,
+.canvas-node-autosize-measure.is-width-measure .markdown-preview-view * {
+	white-space: nowrap !important;
+	max-width: none !important;
+}
+
+.canvas-node-autosize-measure.is-height-measure {
+	width: var(--canvas-node-autosize-measure-width) !important;
+	min-width: 0 !important;
+	max-width: none !important;
+}
+
+.canvas-node-autosize-measure.is-height-measure .canvas-node-content,
+.canvas-node-autosize-measure.is-height-measure .markdown-rendered,
+.canvas-node-autosize-measure.is-height-measure .markdown-preview-view {
+	height: auto !important;
+	min-height: 0 !important;
+	max-height: none !important;
+	overflow: visible !important;
+}
