@@ -208,7 +208,7 @@ measureWidths() / resizeNode()
 
 #### `minSingleLineHeight`
 
-每个可视文本行使用的最小行高。默认 `44`。
+编辑文本区域和空节点使用的最低高度。默认 `30`。
 
 它与 CodeMirror 的默认行高取较大值：
 
@@ -269,7 +269,7 @@ const cjkPadding = containsCjk(text) ? this.settings.cjkSafetyPadding : 0;
 
 #### `tightenExtraPadding`
 
-退出收紧时保留的可见宽度。默认 `20`。
+退出收紧时，在 Markdown 自然内容宽度和真实 DOM 横向占用之外保留的安全宽度。默认 `5`。
 
 只在 `tightenWidthOnExit === true` 且本次编辑确实改过内容时生效。
 
@@ -297,11 +297,15 @@ this.liveResizeDebounced = debounce((update) => this.handleEditorUpdate(update, 
 nextWidth = Math.max(session.node.width, session.liveWidth, session.originalWidth)
 ```
 
-开启时，并且 `session.changed === true`：
+开启时，每次退出编辑都会执行 Markdown 渲染宽度测量。若本次确实修改过内容，可以先使用编辑器测得的 `tightWidth`；未修改时先保留当前宽度，渲染测量完成后再收紧：
 
 ```ts
-nextWidth = session.tightWidth
+nextWidth = session.changed
+	? session.tightWidth
+	: Math.max(session.node.width, session.liveWidth, session.originalWidth)
 ```
+
+随后始终使用 Markdown 渲染宽度完成最终修正。
 
 当前默认开启，并通过渲染后测量和最小宽度限制降低意外塌缩风险。
 
@@ -317,12 +321,12 @@ nextWidth = session.tightWidth
 const DEFAULT_SETTINGS: CanvasAutoSizeSettings = {
 	expansionMode: "right",
 	maxWidth: 520,
-	minSingleLineHeight: 44,
+	minSingleLineHeight: 30,
 	verticalPadding: 10,
 	horizontalPadding: 20,
 	cjkSafetyPadding: 18,
 	wrapSafetyPadding: 28,
-	tightenExtraPadding: 20,
+	tightenExtraPadding: 5,
 	debounceMs: 40,
 	tightenWidthOnExit: true,
 	debugNotices: false,
@@ -686,14 +690,16 @@ const wrappedLines = start && end ? Math.round(Math.max(0, end.top - start.top) 
 
 ```ts
 const lineCount = Math.max(1, session.lineCount);
-const lineHeight = Math.max(session.view.defaultLineHeight, this.settings.minSingleLineHeight);
-return Math.ceil(lineHeight * lineCount + this.settings.verticalPadding + SCROLLBAR_SAFETY_HEIGHT);
+const editorContentHeight = Math.max(session.view.contentHeight, session.view.defaultLineHeight * lineCount);
+const textHeight = Math.max(editorContentHeight, this.settings.minSingleLineHeight);
+return Math.ceil(textHeight + this.settings.verticalPadding + SCROLLBAR_SAFETY_HEIGHT);
 ```
 
 含义：
 
-- 每一行都使用 CodeMirror 默认行高和设置下限中的较大值。
-- 高度只由当前有效可视行数决定，不依赖历史最大高度。
+- 编辑高度使用 CodeMirror 当前内容高度和可视行数估算中的较大值。
+- `minSingleLineHeight` 是整个文本区域的最低值，不再逐行相乘。
+- 高度不依赖历史最大高度。
 - 最后加 `verticalPadding` 和内部固定 `SCROLLBAR_SAFETY_HEIGHT`。
 
 当前 `SCROLLBAR_SAFETY_HEIGHT = 4`。
@@ -765,15 +771,13 @@ debug()
 收紧条件：
 
 ```ts
-const shouldTighten = this.settings.tightenWidthOnExit && session.changed;
+const shouldTighten = this.settings.tightenWidthOnExit;
 ```
 
 也就是说：
 
 - 用户打开收紧。
-- 本次确实改了内容。
-
-两者都满足才收紧。
+- 每次退出都测量 Markdown 宽度；`session.changed` 只决定渲染前是否先采用编辑器的 `tightWidth`。
 
 ## 保存流程
 

@@ -44,9 +44,17 @@
 
 .canvas-node-autosize-measure.is-height-measure .canvas-node-content,
 .canvas-node-autosize-measure.is-height-measure .markdown-rendered,
-.canvas-node-autosize-measure.is-height-measure .markdown-preview-view {
+.canvas-node-autosize-measure.is-height-measure .markdown-preview-view,
+.canvas-node-autosize-measure.is-height-measure .markdown-preview-sizer,
+.canvas-node-autosize-measure.is-height-measure .markdown-preview-section {
 	height: auto !important;
 	min-height: 0 !important;
 	max-height: none !important;
 	overflow: visible !important;
+}
+
+.canvas-node-autosize-measure.is-height-measure .canvas-node-content,
+.canvas-node-autosize-measure.is-height-measure .markdown-rendered,
+.canvas-node-autosize-measure.is-height-measure .markdown-preview-view {
+	flex: none !important;
 }

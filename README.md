@@ -125,9 +125,9 @@ This helps avoid accidental wrapping at the right edge while typing.
 
 #### Exit tighten padding
 
-Extra visible space added to rendered Markdown width when tightening on exit.
+Extra safety width added after measuring the Markdown content box and the real difference between its inner and outer frames.
 
-Default: `20`
+Default: `5`
 
 This setting is shown only when **Tighten width on exit** is enabled.
 
@@ -137,9 +137,9 @@ After editing, the plugin measures an off-screen Markdown clone at the final nod
 
 #### Minimum line height
 
-Minimum per-line height while editing and when rendered Markdown height is unavailable.
+Minimum per-line height while editing and the final height floor for empty or one-line nodes.
 
-Default: `44`
+Default: `30`
 
 Increase this value if one-line nodes look compressed.
 

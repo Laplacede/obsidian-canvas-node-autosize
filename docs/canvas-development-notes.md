@@ -125,10 +125,10 @@ interface RuntimeCanvasNode {
 最终收紧逻辑做了几层保护：
 
 - 默认开启 `tightenWidthOnExit`，可由用户关闭以保留编辑期间的最大宽度。
-- 只有 `session.changed === true` 时才允许退出收紧。
+- 开启 `tightenWidthOnExit` 后，每次退出编辑都会按 Markdown 渲染结果测量宽度；未修改内容时先保留当前宽度，等待渲染测量完成后再收紧，避免临时塌缩。
 - 编辑中维护 `tightWidth`，但通过 `acceptTightWidth()` 拒绝可疑的突然缩小。
 - 正常编辑时 `liveWidth` 只增不减，避免输入过程中节点塌缩。
-- 开启退出收紧时，等待 Markdown DOM 出现后克隆节点，以 `max-content` 离屏测量最终宽度，并加回真实的节点横向占用。
+- 开启退出收紧时，等待 Markdown DOM 出现后克隆节点，以 `max-content` 离屏测量自然内容宽度，再加回节点外框与 Markdown 内容盒之间的真实横向占用，最后添加 `tightenExtraPadding` 安全余量。
 
 ### 6. 刚进入编辑时容易短暂塌缩
 
@@ -156,20 +156,23 @@ requestAnimationFrame(() => {
 - 用 `contentDOM.scrollHeight`。
 - 统计 `.cm-line` 元素高度。
 - 用行首/行尾坐标上下差。
-- 用可视行数和稳定的每行高度估算。
+- 用 CodeMirror 的 `contentHeight` 和可视行数估算编辑高度。
 
 其中 `scrollHeight` 方案最危险。因为节点外框一旦变高，滚动容器自己的 `scrollHeight` 也可能随之变高；插件下一轮又把这个高度当成内容需求，于是节点会随时间快速变高。
 
-最终使用不依赖历史最大高度的确定性估算：
+编辑阶段使用不依赖历史最大高度的估算，并只把 `minSingleLineHeight` 当作整个文本区域的最低值：
 
 ```ts
-const lineHeight = Math.max(session.view.defaultLineHeight, this.settings.minSingleLineHeight);
-return Math.ceil(lineHeight * lineCount + this.settings.verticalPadding + SCROLLBAR_SAFETY_HEIGHT);
+const editorContentHeight = Math.max(session.view.contentHeight, session.view.defaultLineHeight * lineCount);
+const textHeight = Math.max(editorContentHeight, this.settings.minSingleLineHeight);
+return Math.ceil(textHeight + this.settings.verticalPadding + SCROLLBAR_SAFETY_HEIGHT);
 ```
 
 这不是最精确的视觉高度，但没有反馈回路，行为更稳定。
 
-退出编辑后会优先使用更准确的 Markdown DOM 高度：先固定最终节点宽度，再离屏克隆渲染内容，解除克隆的高度限制并读取自然高度。因为测量对象是独立克隆，它不会受到当前节点外框高度影响，也不会形成 `scrollHeight` 反馈回路。Callout、表格、列表和代码块都会走这条路径；拿不到渲染 DOM 时才回退到行数公式。
+退出编辑后会优先使用更准确的 Markdown DOM 高度：先固定最终节点宽度，再创建只包含内容容器和 Markdown 渲染树的离屏测量壳，解除高度限制并读取自然高度。测量壳不会复制当前节点的外框高度，因此不会受到旧尺寸影响，也不会形成 `scrollHeight` 反馈回路。首次渲染未就绪时会重试；Callout、表格、列表和代码块都会走这条路径，最终拿不到渲染 DOM 时才回退到编辑器公式。
+
+应用最终尺寸后还会对真实节点做一次只增不减的溢出检查：读取 `scrollHeight - clientHeight`，仅在确实存在纵向溢出时补足差值和安全高度。这里不把完整 `scrollHeight` 作为目标高度，因此不会形成持续增长反馈。
 
 ### 8. 设置参数不要过多，也不要名字太像
 
